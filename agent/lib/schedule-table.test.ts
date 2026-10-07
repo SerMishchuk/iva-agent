@@ -17,12 +17,17 @@ import { fileURLToPath } from "node:url";
 import "../../scripts/lib/ts-esm-hooks.ts";
 import { runScheduleMigration } from "./schedule-migration.ts";
 import {
+  PROACTIVE_TICK_CRON,
   REMINDER_TICK_CRON,
+  ACTIVE_MEMORY_NIGHT_TIME,
   SCHEDULE_CRON,
   type ScheduleCron,
   type ScheduleName,
+  isLiveSchedule,
   parseCron,
 } from "./schedule-table.ts";
+
+import { memoryNightCron } from "./memory-night-time.ts";
 
 const REPO_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const TABLE_FILE = "agent/lib/schedule-table.ts";
@@ -50,26 +55,35 @@ function temporaryDataDir(t: TestContext): string {
   return directory;
 }
 
-void test("the table pins the cron expressions Iva ships with", () => {
+void test("the table uses the compiled night clock and retains other shipped crons", () => {
   assert.deepEqual(
     { ...SCHEDULE_CRON },
     {
-      "memory-night": "0 4 * * *",
-      digest: "0 8 * * *",
+      "memory-night": memoryNightCron(ACTIVE_MEMORY_NIGHT_TIME),
       "jobs-watchdog": "17 7 * * *",
     },
   );
   // Диспетчер напоминаний стоит вне SCHEDULE_CRON: у него нет ни записи статуса, ни
   // точки догона, а его состояние - сама таблица напоминаний.
   assert.equal(REMINDER_TICK_CRON, "* * * * *");
+  // Тик Watch и Brief — тоже вне таблицы, но с записью статуса: живым его делает отдельная
+  // строка isLiveSchedule, и его провал виден как открытый.
+  assert.equal(PROACTIVE_TICK_CRON, "0,30 * * * *");
+  assert.equal(isLiveSchedule("proactive"), true);
+  assert.equal(isLiveSchedule("reminders"), false);
 });
 
 void test("parseCron reads every entry off its cron string", () => {
   assert.deepEqual(
     NAMES.map((name) => parseCron(SCHEDULE_CRON[name])),
     [
-      { minute: 0, hour: 4, dayOfMonth: null, month: null, dayOfWeek: null },
-      { minute: 0, hour: 8, dayOfMonth: null, month: null, dayOfWeek: null },
+      {
+        minute: Number(ACTIVE_MEMORY_NIGHT_TIME.slice(3)),
+        hour: Number(ACTIVE_MEMORY_NIGHT_TIME.slice(0, 2)),
+        dayOfMonth: null,
+        month: null,
+        dayOfWeek: null,
+      },
       { minute: 17, hour: 7, dayOfMonth: null, month: null, dayOfWeek: null },
     ],
   );
@@ -132,7 +146,7 @@ void test("every schedule file takes its cron from the table", async () => {
     .filter((entry) => entry.endsWith(".ts") && !entry.endsWith(".test.ts"))
     .map((entry) => entry.replace(/\.ts$/, ""))
     .sort();
-  assert.deepEqual(files, [...NAMES, "reminders"].sort());
+  assert.deepEqual(files, [...NAMES, "proactive", "reminders"].sort());
 
   for (const name of NAMES) {
     const module = (await import(`../schedules/${name}.ts`)) as {
@@ -145,6 +159,12 @@ void test("every schedule file takes its cron from the table", async () => {
     readonly default: { readonly cron: string };
   };
   assert.equal(reminders.default.cron, REMINDER_TICK_CRON);
+
+  // Тик Watch и Brief тоже вне SCHEDULE_CRON: точки догона у него нет.
+  const proactive = (await import("../schedules/proactive.ts")) as {
+    readonly default: { readonly cron: string };
+  };
+  assert.equal(proactive.default.cron, PROACTIVE_TICK_CRON);
 });
 
 // The catch-up consumer never exposes the due point it computes; it only decides whether a
@@ -287,7 +307,11 @@ void test("no cron expression survives outside the table", () => {
   for (const file of [...sourceFiles("agent"), ...sourceFiles("scripts")]) {
     if (file === TABLE_FILE) continue;
     const source = readFileSync(join(REPO_ROOT, file), "utf8");
-    for (const cron of [...Object.values(SCHEDULE_CRON), REMINDER_TICK_CRON]) {
+    for (const cron of [
+      ...Object.values(SCHEDULE_CRON),
+      REMINDER_TICK_CRON,
+      PROACTIVE_TICK_CRON,
+    ]) {
       if (source.includes(cron)) offenders.push(`${file}: ${cron}`);
     }
   }

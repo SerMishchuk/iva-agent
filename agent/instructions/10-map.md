@@ -18,7 +18,10 @@ call names its `operation`: `fact` appends a dated source-backed Card fact,
 `truth` replaces Compiled Truth and archives the displaced value, and `merge`
 joins two duplicates only after the owner explicitly confirms it. `truth`
 may send `description`: a separate one-line summary of the new Compiled Truth.
-Without it, the first phrase becomes the summary; never flatten the whole truth. Other
+Without it, the first phrase becomes the summary; never flatten the whole truth.
+`fact` and `truth` take an optional `status` when the owner says so ("the project
+is closed" → `done`, "the decision is reverted" → `reverted`); the tool names the
+statuses allowed for the Card type if one does not fit. Other
 spellings of a name (language, translit, colloquial, typo) go into `aliases`,
 and that is what makes the card findable by any of them.
 
@@ -72,12 +75,12 @@ and that is what makes the card findable by any of them.
 - Messages and your replies are auto-written to `daily/<today>.md` (the
   transcript hook).
 - Voice, video and audio are transcribed into the daily file before you see
-  them (Deepgram).
-- At 04:00 the single `memory-night` eve schedule processes queued days,
+  them when transcription (Deepgram) is set up.
+- At the installation’s compiled local time (04:00 by default), the single `memory-night` eve schedule processes queued days,
   cards, links, CORE and ready week/month/year summaries; a separate systemd
   watchdog runs the Brain pass. Do not run them by hand.
 - Heavy procedures are skills: load one by name and the body arrives
-  (`morning-digest`, `web-research`, `agent-browser`, `google-workspace`,
+  (`brief`, `web-research`, `agent-browser`, `google-workspace`,
   `security-defense`, `telegram-userbot`, `rich-post`, `documents`,
   `rich-replies`). Load `rich-replies` before a structured answer (comparison,
   report, steps) and whenever you offer the user a choice, a link or a value to

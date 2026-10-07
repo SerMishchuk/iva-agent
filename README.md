@@ -55,7 +55,7 @@ The bridge long-polls Telegram, so no public HTTPS, domain or webhook is needed.
 - **Personal CRM** — who your people are, what you agreed, when to follow up.
 - **Search by meaning** — BM25 plus link-graph rerank, any language; optional vector mode with one key.
 - **Decision cards** — what you chose, when and why; old versions stay in a dated History.
-- **Tasks & reminders** — priorities, due dates and a morning digest.
+- **[Tasks](docs/tasks.md) & reminders** — priorities, due dates and a daily brief.
 - **Web search** — four pluggable providers: Tavily, Exa, Parallel or Brave.
 - **Google Workspace** — Gmail, Calendar, Drive, Sheets, Docs and Tasks from chat via the `gws` CLI; installed for you, with a guided key setup right in the conversation.
 - **Skills & MCP** — drop one file to add a procedure or connect an MCP server; keys stay in `.env`.
@@ -171,7 +171,34 @@ Default model is deepseek-v4-pro, 131k context. On Go it runs about $14–15/mo 
 ## What's New
 
 <details>
-<summary><b>v0.4.10 · 29.09.2026 — expand the latest releases</b></summary>
+<summary><b>v0.4.12 · 05.10.2026 — expand the latest releases</b></summary>
+
+### 05.10.2026
+
+#### v0.4.12
+
+- 👀 **Iva tells you what you missed**: once an hour code checks unread private chats, mentions in Telegram and Gmail without newsletters; the model wakes only for something new and sends one message per item with buttons «To tasks», «Remind later», «Mute this one». Quiet hours at night, at most 5 messages a day, one toggle «Writes on her own» in `/menu` → Notices.
+- ☀️ **The Brief replaces the morning digest**: at 08:30 and 14:00 Iva sends an overview of tasks, calendar, mail, Telegram, connections and plugins. Change the time with a phrase («brief at 9»); `/digest` returns the same overview.
+- 🚨 **Failed jobs reach you with the cause and a Fix button**: user timers and plugin services are checked hourly; Iva's own failed jobs are explained instead of silently self-fixed and come first in the morning Brief. `iva signal <source> <text>` lets any local script hand Iva a message.
+- 🧩 **Iva writes her own plugins**: say «make a plugin that…». A plugin of skills and scripts she installs herself; one with code or MCP she only proposes, and it is installed after you tap Install in a private chat.
+- 🗜 **A long conversation is compacted between turns, not in the middle of an answer**: after a turn that reached 60% of the model window or 275k tokens, Iva compacts the conversation while nobody waits. A message sent meanwhile gets «Compacting the conversation, I'll answer in a moment.» and its answer right after.
+- 🧹 **Iva no longer asks you to press /new**: the «context window is N% full» line is gone; `/new` works as before.
+- 🎬 **Video, audio and files are handled by Iva herself, and she sees an image on disk**: the model gets facts about an attachment instead of orders not to touch it, and `read_file` on an image returns its description from the vision model.
+
+### 03.10.2026
+
+#### v0.4.11
+
+- 🌙 **Nightly memory works on a ChatGPT subscription again**: the night call now streams on every provider. Since 0.4.9 the subscription backend answered 400 on the first call of every night. The night's own low reasoning effort is no longer overridden by the chat default.
+- 🗂️ **A vault `.gitignore` no longer stops the night**: files the owner excludes are skipped and named in the log, the rest is committed and the day closes. Ignored files stay on disk, outside the backup.
+- 🔁 **A short provider failure no longer fails the turn**: before the answer starts, Iva makes up to three attempts with 5 and 15 second waits and honours `Retry-After`. An opened stream or an executed tool is never replayed.
+- 🤖 **`gpt-6.1-sol` in the ChatGPT subscription list**: Iva identifies as Codex client 0.159.2, so `/model` and `iva config` show the new model.
+- 📅 **Task deadlines are stored as dates**: "tomorrow" becomes `YYYY-MM-DD` in the owner's timezone before it is saved, and a deadline can be corrected with `update`. Old deadlines written as words stay as they are.
+- 🔧 **Google CLI updates without root**: `iva update` installs and refreshes `gws` under the service user's `~/.local`. Google sign-in and settings stay as they are.
+- ⏰ **The nightly memory time is configurable**: `MEMORY_NIGHT_TIME=HH:mm` in `.env`, 04:00 by default. It takes effect after `iva update --force`.
+- 🔀 **OpenCode Go models over Responses**: `OPENCODE_PROTOCOL=responses` in `.env` switches the Go text wire, with the same key and model settings. chat/completions stays the default.
+- 📝 **The nightly Report reads like a note**: 2–5 plain lines in the owner's language, built by code from the night's results. The Report is still off by default.
+- 🃏 **A Card status on the owner's word**: "the project is closed" sets the Card status at once through `write_card`, and the night of that day keeps it.
 
 ### 29.09.2026
 
@@ -182,33 +209,6 @@ Default model is deepseek-v4-pro, 131k context. On Go it runs about $14–15/mo 
 - ♻️ **A restart mid-reply no longer blocks the next messages**: on the next start Iva moves the interrupted workflow state to quarantine, Bridge closes the broken turn with one line and drains the saved queue, and `/new` answers without `iva reset`. A second start in a row leaves the workflow state alone, and a failed recovery is one journal line that does not keep Iva down.
 - 🔎 **File search no longer hangs the turn**: one `grep` or `glob` call stops after 20 seconds, 20 000 files or when the turn is stopped, and returns what it found with a hint to narrow the path. `node_modules`, `.git` and `*.trash-*` quarantines are skipped.
 - 🧠 **Sonnet 5.5 takes the place of Sonnet 5 on Claude**: the model screen and setup offer Fable 5.1, Opus 5.5 and Sonnet 5.5 and write `claude-sonnet-5-5` to `.env`. A Claude Code that does not know Sonnet 5.5 yet keeps Sonnet 5 on the same button, and `claude-sonnet-5` in `.env` still works. The OpenRouter list offers `anthropic/claude-sonnet-5.5`.
-
-### 28.09.2026
-
-#### v0.4.9
-
-- 🌙 **Nightly memory now runs as four code-driven steps**: short structured requests turn the day into Cards, links, CORE and summaries, while code writes the files. The format reaches every supported provider, facts require exact quotes from the owner, and a concurrent human edit is preserved.
-- 💾 **Claude conversations use the prompt cache again**: each request pins the cache breakpoint to a stable conversation prefix instead of the changing tail, so later requests reuse the context already sent.
-- 🧪 **Releases live in main and beta updates follow the beta branch**: `iva beta` opts in, `iva stable` returns to releases, and updates never move an installation backwards.
-- 🃏 **Cards stay writable after the day, night and merge**: a new Compiled Truth cannot replace Card structure with headings or an open code fence, successful nightly writes clear `truth_pending`, and repeated facts and multiline Card content survive merge.
-- 🧹 **Iva suggests `/new` when a conversation fills its context**: a quiet hint appears once at 50, 75 and 90 percent in a private Telegram chat, resets after compaction and stays out of groups and background turns.
-- 🚑 **Tool schemas work on every provider again**: `write_card` sends one flat object schema for all operations, validates the selected operation itself and tells the model what to correct. A guard checks every tool exactly as eve serializes it.
-- 🔒 **A long Card edit keeps its file lock**: a live holder refreshes the lock while it works, the lock of a crashed holder can still be taken after it becomes stale, and a separate ten-minute fuse prevents a stuck section from holding the lock forever.
-- 🧠 **Nightly Brain reaches the private vault backup again**: the derived link graph is no longer committed, and a missing remote is created or attached only after GitHub confirms that the repository is private.
-- 🔁 **Three observed failures pause that day for the owner**: the catch-up stops retrying it, reports the last cause once and waits for `iva jobs skip memory-daily <date>` before moving on.
-
-### 24.09.2026
-
-#### v0.4.8
-
-- 📎 **Iva sends files to the chat again**: since 0.4.1 the bash guard blocked `curl` to api.telegram.org, and when asked for a DOCX or a PDF, Iva answered that she could not send an attachment. The new `send_file` tool sends a file from the vault or the temp folder as a document to the chat and topic where it was asked for; `.env`, `data/` and anything outside those folders stay home, even through a symlink.
-- 🔁 **Iva no longer repeats one broken call hundreds of times**: after three identical tool errors in a row, or eight errors of one tool with different arguments, the turn ends with a short explanation; a successful call resets the count. A busy background agent is not polled in circles either: `AGENT_BUSY` now names the next step (#241).
-- 💾 **Fewer tokens paid twice**: Codex requests carry a cache key tied to the session, so each step of a dialogue reads the previous one from cache. Claude keeps the system prompt and its working folder the same between steps and reads the history from the prompt cache (#236). `glob` returns at most 1000 paths and names the rest, instead of 43584 paths in one call. Token accounting now also counts compaction and vision.
-- 🧭 **Reminder and card refusals say what to fix**: `remind` used to answer "give exactly one of at or cron" without naming the field, and the model tried placeholders dozens of times in a row. Now a refusal names the fields that came, what was expected and ends with one ready call for the case; `write_card` refusals carry a sample call too.
-- ⛔ **A background turn at the eve session limit no longer passes for done**: a reminder, a wake-up after a schedule or `iva remind` that hit the session token limit used to send a stale intermediate text as the result. Now the turn fails with the cause, and a reminder sends its own text with a note that it was not done.
-- 🔑 **Google Workspace connects from the menu again**: gws 0.22.5 prints `redirect_uri` URL-encoded, so the menu found no port in it, waited for the timeout and blamed client_secret. Now the port is read from both the encoded and the raw form.
-- 🌙 **A failed nightly summary continues the day instead of starting over**: the code-driven `memory-night` pipeline caches every validated model response, resumes interrupted writes without another call, and processes up to three queued days in order. The nightly run reaches its files again: `read_file`, `grep` and `glob` accept `vault/daily/…` from the project root (#242).
-- 📦 **A token usage package in one command**: `curl -fsSL https://raw.githubusercontent.com/smixs/iva-agent/main/diagnose-usage.sh | bash` collects three days of per-step tokens, the skeleton of each turn and failure lines, with the heaviest turns on top. Conversation text, tool inputs and outputs and `.env` values other than the model settings stay out; the package arrives as a file in the bot chat.
 
 </details>
 
